@@ -1,13 +1,18 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
-
 const app = express();
-
+// {
+//     origin: ["https://buddy-frontend.vercel.app"],
+//     credentials: true,
+//   }
 // Middleware
-app.use(cors());
-app.use(express.json());
 
+app.use(cors(
+   
+));
+
+app.use(express.json());
 // Routes
 const authRoutes = require("./routes/authRoutes");
 app.use("/api/auth", authRoutes);

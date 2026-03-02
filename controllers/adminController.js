@@ -13,15 +13,34 @@ const supabase = require("../config/supabase");
 
 // GET ALL USERS
 exports.getAllUsers = async (req, res) => {
-  const { data, error } = await supabase
-    .from("users")
-    .select("*");
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select(`
+        id,
+        name,
+        email,
+        role,
+        profile_completed,
+        height,
+        weight,
+        target_weight,
+        gender,
+        age,
+        location,
+        fitness_goals,
+        preferred_workouts,
+        created_at
+      `)
+      .order("created_at", { ascending: false });
 
-  if (error) return res.status(500).json({ error: error.message });
+    if (error) throw error;
 
-  res.json(data);
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
-
 
 // UPDATE USER ROLE
 exports.updateUserRole = async (req, res) => {
@@ -87,11 +106,11 @@ exports.getActivityLogs = async (req, res) => {
 
 exports.createGym = async (req, res) => {
   try {
-    const { name, city, address, latitude, longitude } = req.body;
+    const { name, city, address} = req.body;
 
     const { data, error } = await supabase
       .from("gyms")
-      .insert([{ name, city, address, latitude, longitude }])
+      .insert([{ name, city, address }])
       .select()
       .single();
 
@@ -176,19 +195,19 @@ exports.deleteChallenge = async (req, res) => {
 //GetAllGyms // GetAllGyms
 
 
-exports.getAllGyms = async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from("gyms")
-      .select("*");
+// exports.getAllGyms = async (req, res) => {
+//   try {
+//     const { data, error } = await supabase
+//       .from("gyms")
+//       .select("*");
 
-    if (error) throw error;
+//     if (error) throw error;
 
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+//     res.json(data);
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// };
 
 
 //Delete gym
@@ -295,8 +314,14 @@ exports.getAllUsers = async (req, res) => {
         email,
         role,
         profile_completed,
+        gender,
+        age,
+        location,
+        fitness_goals,
+        preferred_workouts,
         created_at
-      `);
+      `)
+      .order("created_at", { ascending: false });
 
     if (error) throw error;
 
@@ -304,7 +329,7 @@ exports.getAllUsers = async (req, res) => {
     const usersWithStats = await Promise.all(
       data.map(async (user) => {
         const { count } = await supabase
-          .from("workouts")
+          .from("workouts",)
           .select("*", { count: "exact", head: true })
           .eq("user_id", user.id);
 
@@ -313,10 +338,15 @@ exports.getAllUsers = async (req, res) => {
           name: user.name,
           email: user.email,
           role: user.role,
+        gender:user.gender,
+        age:user.age,
+        location:user.location,
+        fitness_Goals:user.fitness_goals,
+        preffered_Workouts:user.preferred_workouts,
+        created_at:user.created_at,
           profileCompleted: user.profile_completed,
-          createdAt: user.created_at,
-          lastActive: "Recently",
-          workoutsCount: count || 0,
+          // lastActive: "Recently",
+          // workoutsCount: count || 0,
         };
       })
     );
@@ -331,29 +361,51 @@ exports.getAllUsers = async (req, res) => {
 
 // ================= GYMS =================
 
+// exports.getAllGyms = async (req, res) => {
+//   try {
+//     const { data, error } = await supabase
+//       .from("gyms")
+//       .select("*");
+
+//     if (error) throw error;
+
+//     const formatted = data.map(gym => ({
+//       id: gym.id,
+//       name: gym.name,
+//       city: gym.city, 
+//       address:gym.address,
+//       // members: gym.members_count || 0,
+//       // status: gym.status || "active",
+//       createdAt: gym.created_at
+//     }));
+
+//     res.json(formatted);
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// };
+// ================= GYMS =================
+
 exports.getAllGyms = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("gyms")
-      .select("*");
+      .select(`
+        id,
+        created_at,
+        name,
+        city,
+        address
+      `)
+      .order("created_at", { ascending: false });
 
     if (error) throw error;
 
-    const formatted = data.map(gym => ({
-      id: gym.id,
-      name: gym.name,
-      location: `${gym.city}, ${gym.address}`,
-      members: gym.members_count || 0,
-      status: gym.status || "active",
-      createdAt: gym.created_at,
-    }));
-
-    res.json(formatted);
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
-
 
 
 // ================= CHALLENGES =================
@@ -368,11 +420,16 @@ exports.getAllChallenges = async (req, res) => {
 
     const formatted = data.map(ch => ({
       id: ch.id,
-      title: ch.title,
-      participants: ch.participants_count || 0,
-      duration: ch.duration || "N/A",
-      status: ch.status || "active",
-      createdAt: ch.created_at,
+       title: ch.title,
+      // participants: ch.participants_count || 0,
+      // duration: ch.duration || "N/A",
+      // status: ch.status || "active",
+      description:ch.description,
+      goal_type:ch.goal_type,
+      target_value:ch.target_value,
+      start_date:ch.start_date,
+      end_date:ch.end_date,
+      created_at:ch.created_at
     }));
 
     res.json(formatted);
@@ -396,9 +453,14 @@ exports.getAllGroups = async (req, res) => {
     const formatted = data.map(group => ({
       id: group.id,
       name: group.name,
-      members: group.members_count || 0,
-      category: group.category || "General",
-      createdAt: group.created_at,
+      //members: group.members_count || 0,
+      //category: group.category || "General",
+      goal_type:group.goal_type,
+      Start_date:group.start_date,
+      Created_by:group.Created_by,
+      Category:group.Category,
+      Description:group.description,
+      created_at: group.created_at,
     }));
 
     res.json(formatted);

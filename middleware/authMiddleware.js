@@ -27,7 +27,7 @@
 //     res.status(401).json({ message: "Invalid token" });
 //   }
 // };
-
+const jwt = require("jsonwebtoken");
 const supabase = require("../config/supabase");
 
 exports.protect = async (req, res, next) => {
@@ -40,15 +40,25 @@ exports.protect = async (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    //  Verify custom JWT
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    //  Fetch full user from database
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", decoded.id)
+      .single();
 
     if (error || !user) {
       return res.status(401).json({ message: "Invalid token" });
     }
 
+    //  Attach DB user (with role)
     req.user = user;
+
     next();
   } catch (err) {
-    return res.status(401).json({ message: "Auth failed" });
+    return res.status(401).json({ message: "Invalid token" });
   }
 };
