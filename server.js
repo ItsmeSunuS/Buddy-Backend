@@ -2,13 +2,13 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const app = express();
-// {
-//     origin: ["https://buddy-frontend.vercel.app"],
-//     credentials: true,
-//   }
+// 
 // Middleware
 
-app.use(cors(
+app.use(cors({
+     origin: ["https://buddy-frontend.vercel.app"],
+     credentials: true,
+  }
    
 ));
 
