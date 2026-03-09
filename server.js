@@ -4,11 +4,11 @@ require("dotenv").config();
 const app = express();
 // 
 // Middleware
-
-app.use(cors({
-     origin: ["https://buddy-frontend.vercel.app"],
-     credentials: true,
-  }
+// {
+//      origin: ["https://buddy-frontend.vercel.app"],
+//      credentials: true,
+//   }
+app.use(cors(
    
 ));
 
@@ -40,7 +40,6 @@ app.use("/api/admin", adminRoutes);
 
 const gymRoutes = require("./routes/gymRoutes");
 app.use("/api/gyms", gymRoutes);
-app.use("/api/admin", adminRoutes);
 
 // Test route
 app.get("/", (req, res) => {

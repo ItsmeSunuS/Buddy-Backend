@@ -70,36 +70,38 @@ exports.getAllUsers = async (req, res) => {
   res.json(data);
 };
 
-// Find Matches
-exports.findMatches = async (req, res) => {
-  try {
-    const { data: currentUser } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", req.user.id)
-      .single();
+// // Find Matches
+// exports.findMatches = async (req, res) => {
+//   try {
+//     const { data: currentUser } = await supabase
+//       .from("users")
+//       .select("*")
+//       .eq("id", req.user.id)
+//       .single();
 
-    const { data: users } = await supabase
-      .from("users")
-      .select("*")
-      .neq("id", req.user.id)
-      .eq("location", currentUser.location);
+//     const { data: users } = await supabase
+//       .from("users")
+//       .select("*")
+//       .neq("id", req.user.id)
+//       .eq("profile_completed", true)
+//       .eq("location", currentUser.location);
 
-    const matches = users.filter(user =>
-      user.fitness_goals?.some(goal =>
-        currentUser.fitness_goals?.includes(goal)
-      ) &&
-      user.preferred_workouts?.some(workout =>
-        currentUser.preferred_workouts?.includes(workout)
-      )
-    );
+//     const matches = users.filter(user =>
+//       user.fitness_goals?.some(goal =>
+//         currentUser.fitness_goals?.includes(goal)
+//       ) &&
+//       user.preferred_workouts?.some(workout =>
+//         currentUser.preferred_workouts?.includes(workout)
+//       )
+//     );
 
-    res.json(matches);
+//     res.json(matches);
 
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// };
+
 
 // Add Buddy
 // exports.addBuddy = async (req, res) => {
@@ -144,22 +146,25 @@ exports.addBuddy = async (req, res) => {
       return res.status(400).json({ message: "Cannot add yourself" });
     }
 
-    const { data: existing } = await supabase
+    const { data: existing, error: checkError } = await supabase
       .from("buddies")
       .select("*")
-      .eq("user_id", req.user.id)
-      .eq("buddy_id", buddyId)
-      .single();
+      .or(`and(user_id.eq.${req.user.id},buddy_id.eq.${buddyId}),and(user_id.eq.${buddyId},buddy_id.eq.${req.user.id})`);
 
-    if (existing)
+    if (checkError) throw checkError;
+
+    if (existing && existing.length > 0) {
       return res.status(400).json({ message: "Already added" });
+    }
 
     const { error } = await supabase
       .from("buddies")
-      .insert([{
-        user_id: req.user.id,
-        buddy_id: buddyId
-      }]);
+      .insert([
+        {
+          user_id: req.user.id,
+          buddy_id: buddyId
+        }
+      ]);
 
     if (error) throw error;
 
@@ -171,7 +176,6 @@ exports.addBuddy = async (req, res) => {
 };
 
 //GetBuddies
-
 exports.getMyBuddies = async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -194,6 +198,63 @@ exports.getMyBuddies = async (req, res) => {
     const buddies = data.map(item => item.users);
 
     res.json(buddies);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+exports.removeBuddy = async (req, res) => {
+  try {
+    const buddyId = req.params.id;
+
+    const { error } = await supabase
+      .from("buddies")
+      .delete()
+      .eq("user_id", req.user.id)
+      .eq("buddy_id", buddyId);
+
+    if (error) throw error;
+
+    res.json({ message: "Buddy removed" });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+exports.getSuggestedBuddies = async (req, res) => {
+  try {
+
+    const { data: currentUser } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", req.user.id)
+      .single();
+
+    const { data: users } = await supabase
+      .from("users")
+      .select("*")
+      .neq("id", req.user.id)
+      .eq("profile_completed", true);
+
+    const matches = users.filter(user => {
+
+      const sameGoal = user.fitness_goals?.some(goal =>
+        currentUser.fitness_goals?.includes(goal)
+      );
+
+      const sameWorkout = user.preferred_workouts?.some(workout =>
+        currentUser.preferred_workouts?.includes(workout)
+      );
+
+      const sameLocation = user.location === currentUser.location;
+
+      return sameGoal || sameWorkout || sameLocation;
+
+    });
+
+    res.json(matches);
 
   } catch (err) {
     res.status(500).json({ error: err.message });

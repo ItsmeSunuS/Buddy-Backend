@@ -1,17 +1,20 @@
 const supabase = require("../config/supabase");
 
+
 // Send Message
 exports.sendMessage = async (req, res) => {
   try {
-    const { receiverId, message } = req.body;
+    const { receiver_id, message } = req.body;
 
     const { data, error } = await supabase
       .from("messages")
-      .insert([{
-        sender_id: req.user.id,
-        receiver_id: receiverId,
-        message
-      }])
+      .insert([
+        {
+          sender_id: req.user.id,
+          receiver_id: receiver_id,
+          message: message
+        }
+      ])
       .select()
       .single();
 
@@ -20,20 +23,20 @@ exports.sendMessage = async (req, res) => {
     res.json(data);
 
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 };
-
 // Get Conversation
 exports.getConversation = async (req, res) => {
   try {
-    const otherUserId = req.params.id;
-    const myId = req.user.id;
+
+    const buddyId = req.params.id;
 
     const { data, error } = await supabase
       .from("messages")
       .select("*")
-     .or(`and(sender_id.eq.${myId},receiver_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},receiver_id.eq.${myId})`)
+      .or(`and(sender_id.eq.${req.user.id},receiver_id.eq.${buddyId}),and(sender_id.eq.${buddyId},receiver_id.eq.${req.user.id})`)
       .order("created_at", { ascending: true });
 
     if (error) throw error;
@@ -41,6 +44,7 @@ exports.getConversation = async (req, res) => {
     res.json(data);
 
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 };

@@ -182,17 +182,20 @@ exports.getGroup = async (req, res) => {
   try {
     const groupId = req.params.id;
 
-    const { data, error } = await supabase
-      .from("groups")
-      .select(`
-        *,
-        group_members (
-          user_id,
-          progress
-        )
-      `)
-      .eq("id", groupId)
-      .single();
+   const { data, error } = await supabase
+  .from("groups")
+  .select(`
+    *,
+    group_members (
+      progress,
+      users (
+        id,
+        name
+      )
+    )
+  `)
+  .eq("id", groupId)
+  .single();
 
     if (error) throw error;
 
@@ -206,6 +209,26 @@ exports.getGroup = async (req, res) => {
       ...data,
       totalProgress
     });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+//
+// GET ALL GROUPS
+//
+exports.getGroups = async (req, res) => {
+  try {
+
+    const { data, error } = await supabase
+      .from("groups")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    res.json(data);
 
   } catch (err) {
     res.status(500).json({ error: err.message });

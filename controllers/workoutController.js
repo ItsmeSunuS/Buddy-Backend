@@ -28,10 +28,10 @@ exports.addWorkout = async (req, res) => {
     action: "Added workout"
     }]);
 
-    // Get all workouts of user
+    // Get all workouts of user(admin)
     const { data: workouts, error: workoutsError } = await supabase
       .from("workouts")
-      .select("calories_burned")
+      .select("*")
       .eq("user_id", req.user.id);
 
     if (workoutsError) throw workoutsError;

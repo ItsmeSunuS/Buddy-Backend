@@ -32,21 +32,33 @@ exports.createChallenge = async (req, res) => {
 // Join Challenge
 exports.joinChallenge = async (req, res) => {
   try {
+
     const challengeId = req.params.id;
+    const userId = req.user.id;
 
     const { error } = await supabase
       .from("challenge_participants")
       .insert([{
         challenge_id: challengeId,
-        user_id: req.user.id,
+        user_id: userId,
         progress: 0
       }]);
-
-    if (error) throw error;
+// .insert({
+//   challenge_id: challengeId,
+//   user_id: userId,
+//   progress: 0
+// }, { upsert: true })
+    if (error) {
+      if (error.code === "23505") {
+        return res.status(400).json({ message: "Already joined this challenge" });
+      }
+      throw error;
+    }
 
     res.json({ message: "Joined challenge successfully" });
 
   } catch (err) {
+    console.error("Join challenge error:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -57,32 +69,32 @@ exports.updateProgress = async (req, res) => {
   try {
     const challengeId = req.params.id;
 
-    const { data: challenge } = await supabase
-      .from("challenges")
-      .select("*")
-      .eq("id", challengeId)
-      .single();
+   const { data: challenge, error: challengeError } = await supabase
+  .from("challenges")
+  .select("*")
+  .eq("id", challengeId)
+  .single();
 
-    const { data: workouts } = await supabase
+if (challengeError) throw challengeError;
+   const { data: workouts, error: workoutError } = await supabase
   .from("workouts")
   .select("*")
   .eq("user_id", req.user.id)
   .gte("date", challenge.start_date)
   .lte("date", challenge.end_date);
-    let total = 0;
 
-    if (challenge.goal_type === "calories") {
-      total = workouts.reduce((sum, w) => sum + (w.calories_burned || 0), 0);
-    }
+if (workoutError) throw workoutError;
 
-    if (challenge.goal_type === "duration") {
-      total = workouts.reduce((sum, w) => sum + (w.duration || 0), 0);
-    }
 
-    if (challenge.goal_type === "distance") {
-      total = workouts.reduce((sum, w) => sum + (w.distance || 0), 0);
-    }
+   let total = 0;
 
+if (challenge.goal_type === "calories") {
+  total = workouts.reduce((sum, w) => sum + (w.calories_burned || 0), 0);
+} else if (challenge.goal_type === "duration") {
+  total = workouts.reduce((sum, w) => sum + (w.duration || 0), 0);
+} else if (challenge.goal_type === "distance") {
+  total = workouts.reduce((sum, w) => sum + (w.distance || 0), 0);
+}
     await supabase
       .from("challenge_participants")
       .update({ progress: total })

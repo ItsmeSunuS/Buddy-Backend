@@ -106,19 +106,42 @@ exports.getActivityLogs = async (req, res) => {
 
 exports.createGym = async (req, res) => {
   try {
-    const { name, city, address} = req.body;
+    const { name, city, address, rating, phone, hours } = req.body;
+
+    // validation
+    if (!name || !city) {
+      return res.status(400).json({
+        error: "Name and city are required"
+      });
+    }
 
     const { data, error } = await supabase
       .from("gyms")
-      .insert([{ name, city, address }])
+      .insert([
+        {
+          name,
+          city,
+          address,
+          rating,
+          phone,
+          hours
+         
+        }
+      ])
       .select()
       .single();
 
     if (error) throw error;
 
-    res.status(201).json(data);
+    res.status(201).json({
+      message: "Gym created successfully",
+      gym: data
+    });
+
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      error: err.message
+    });
   }
 };
 
@@ -392,10 +415,13 @@ exports.getAllGyms = async (req, res) => {
       .from("gyms")
       .select(`
         id,
-        created_at,
         name,
         city,
-        address
+        address,
+        rating,
+        phone,
+        hours,
+        created_at
       `)
       .order("created_at", { ascending: false });
 
@@ -406,7 +432,6 @@ exports.getAllGyms = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
 
 // ================= CHALLENGES =================
 
@@ -501,4 +526,19 @@ exports.getAdminDashboardSummary = async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+};
+exports.updateGym = async (req, res) => {
+  const { id } = req.params;
+  const { name, city, address, rating, phone, hours } = req.body;
+
+  const { data, error } = await supabase
+    .from("gyms")
+    .update({ name, city, address, rating, phone, hours })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  res.json(data);
 };
